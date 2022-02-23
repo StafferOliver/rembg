@@ -1,6 +1,7 @@
 import functools
 import io
 import numpy as np
+import torch.nn as nn
 from PIL import Image
 from skimage import transform
 from skimage.filters import gaussian
@@ -108,7 +109,7 @@ def get_model(model_name):
 
 def remove(
     data,
-    model_name="u2net",
+    input_model="u2net",
     alpha_matting=False,
     *args, **kwargs
 ):
@@ -122,7 +123,12 @@ def remove(
     """
 
     # Initialize model
-    model = get_model(model_name)
+    if isinstance(input_model, str):
+        model = get_model(model_name)
+    elif isinstance(input_model, nn.Module):
+        model = input_model
+    else:
+        raise TypeError("The expected type for the argument input_model is either string or nn.Module.")
 
     # Transform data
     if isinstance(data, np.ndarray):
@@ -153,7 +159,7 @@ def remove(
 
 def portrait(
     data,
-    model_name='u2net_portrait',
+    input_model='u2net_portrait',
     composite=False,
     sigma=2,
     alpha=0.5
@@ -170,7 +176,12 @@ def portrait(
     """
 
     # Initialize model
-    model = get_model(model_name)
+    if isinstance(input_model, str):
+        model = get_model(model_name)
+    elif isinstance(input_model, nn.Module):
+        model = input_model
+    else:
+        raise TypeError("The expected type for the argument input_model is either string or nn.Module.")
 
     # Transform data
     if isinstance(data, np.ndarray):

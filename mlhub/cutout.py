@@ -83,7 +83,7 @@ def cutout(input, output, model, compare, alpha_matting,
         f = np.fromfile(input_path)
         result = remove(
                 f,
-                model_name=model,
+                input_model=model,
                 alpha_matting=alpha_matting,
                 alpha_matting_foreground_threshold=alpha_matting_foreground_threshold,
                 alpha_matting_background_threshold=alpha_matting_background_threshold,

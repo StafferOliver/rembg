@@ -55,7 +55,7 @@ def portrait(input, output, composite, composite_sigma, composite_alpha):
         f = Image.open(input_path).convert("RGB")
         result = p(
             f,
-            model_name='u2net_portrait',
+            input_model='u2net_portrait',
             composite=composite,
             sigma=composite_sigma,
             alpha=composite_alpha
