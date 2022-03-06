@@ -117,14 +117,14 @@ def remove(
     Background removal on a single image
 
     :param data: the input image (PIL.Image or NumPy.ndarray)
-    :param model_name: the model used in the background removal
+    :param input_model: the model used in the background removal
     :param alpha_matting: if True, alpha matting will be applied with the rest of parameters
     :return: return True if all the steps are correctly finished
     """
 
     # Initialize model
     if isinstance(input_model, str):
-        model = get_model(model_name)
+        model = get_model(input_model)
     elif isinstance(input_model, nn.Module):
         model = input_model
     else:
@@ -168,7 +168,7 @@ def portrait(
     Portrait generation with single given picture
 
     :param data: the input image (PIL.Image or NumPy.ndarray)
-    :param model_name: the model used in the portrait generation
+    :param input_model: the model used in the portrait generation
     :param composite: if True, the original portrait will be blurred and composite into the output
     :param sigma: the blur parameters used for Gaussian filter (Used when composite=True)
     :param alpha: the blur parameters used for Gaussian filter (Used when composite=True)
@@ -177,7 +177,7 @@ def portrait(
 
     # Initialize model
     if isinstance(input_model, str):
-        model = get_model(model_name)
+        model = get_model(input_model)
     elif isinstance(input_model, nn.Module):
         model = input_model
     else:
