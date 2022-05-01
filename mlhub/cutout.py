@@ -5,7 +5,7 @@ import glob
 import os
 import warnings
 import filetype
-from src.rembg.bg import remove, alpha_layer_remove, video_remove
+from src.rembg.bg import remove, get_model, alpha_layer_remove, video_remove, params_default_dict, load_config
 from PIL import Image, ImageFile
 import matplotlib.pyplot as plt
 from mlhub.utils import get_package_dir
@@ -27,40 +27,40 @@ if len(model_choices) == 0:
 @click.option('--output',
               '-o',
               type=str,
-              default=None,
+              default=params_default_dict['cutout']['output'],
               help='Path to the output file')
 @click.option('--model',
               '-m',
               type=click.Choice(model_choices),
-              default="u2net",
+              default=params_default_dict['cutout']['model'],
               help='The model name')
 @click.option('--compare',
               '-c',
-              is_flag=True,
+              is_flag=params_default_dict['cutout']['compare'],
               help="Display both original and result picture")
 @click.option('--alpha-matting',
               '-a',
-              is_flag=False,
+              is_flag=params_default_dict['cutout']['alpha-matting'],
               help='When true use alpha matting cutout')
 @click.option('--alpha-matting-foreground-threshold',
               '-af',
               type=int,
-              default=240,
+              default=params_default_dict['cutout']['alpha-matting-foreground-threshold'],
               help='The trimap foreground threshold')
 @click.option('--alpha-matting-background-threshold',
               '-ab',
               type=int,
-              default=10,
+              default=params_default_dict['cutout']['alpha-matting-background-threshold'],
               help='The trimap background threshold')
 @click.option('--alpha-matting-erode-size',
               '-ae',
               type=int,
-              default=10,
+              default=params_default_dict['cutout']['alpha-matting-erode-size'],
               help='Size of element used for the erosion')
 @click.option('--alpha-matting-base-size',
               '-ab',
               type=int,
-              default=1000,
+              default=params_default_dict['cutout']['alpha-matting-base-size'],
               help='The image base size')
 def cutout(input, output, model, compare, alpha_matting,
            alpha_matting_foreground_threshold,
@@ -88,7 +88,7 @@ def cutout(input, output, model, compare, alpha_matting,
                 alpha_matting_foreground_threshold=alpha_matting_foreground_threshold,
                 alpha_matting_background_threshold=alpha_matting_background_threshold,
                 alpha_matting_erode_structure_size=alpha_matting_erode_size,
-                alpha_matting_base_size=alpha_matting_base_size,
+                alpha_matting_base_size=alpha_matting_base_size
             )
 
         if filetype.guess(input_path).mime.find('jpeg') >= 0:
@@ -126,10 +126,30 @@ def cutout(input, output, model, compare, alpha_matting,
         if not os.path.exists(os.path.split(output_path)[0]):
             raise FileNotFoundError("You have to specific a valid output path for a video input")
         else:
-            flag = video_remove(input_path, output_path)
+            flag = video_remove(input_path, output_path, input_model=model)
 
     else:
         raise FileNotFoundError("The input " + input_path + " is not a valid path to a image file")
+
+
+def batch(input_folder, config_path):
+    method, config = load_config(config_path)
+    if method != "cutout":
+        raise Exception("The method indicated in the file is not 'cutout', please check your config file.")
+    for root, _, files in os.walk(input_folder):
+        for file in files:
+            model = get_model(config['model'])
+            cutout(file,
+                   output=config['output'],
+                   model=model,
+                   compare=config['compare'],
+                   alpha_matting=config['alpha_matting'],
+                   alpha_matting_foreground_threshold=config["alpha_matting_foreground_threshold"],
+                   alpha_matting_background_threshold=config["alpha_matting_background_threshold"],
+                   alpha_matting_erode_structure_size=config["alpha_matting_erode_size"],
+                   alpha_matting_base_size=config["alpha_matting_base_size"])
+    print("Batch process completed")
+    return True
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@ import click
 import os
 import warnings
 import filetype
+from src.rembg.bg import params_default_dict, load_config, get_model
 from src.rembg.bg import portrait as p, video_portrait as vp
 from PIL import Image, ImageFile
 import matplotlib.pyplot as plt
@@ -22,23 +23,28 @@ model_path = os.environ.get(
 @click.option('--output',
               '-o',
               type=str,
-              default=None,
+              default=params_default_dict["portrait"]["output"],
               help='Path to the output file')
+@click.option('--model',
+              '-m',
+              type=str,
+              default=params_default_dict["portrait"]["model"],
+              help='The model name')
 @click.option('--composite',
               '-c',
-              default=True,
+              default=params_default_dict["portrait"]["composite"],
               help='Generate the composition of portrait and original photo')
 @click.option('--composite-sigma',
               '-cs',
               type=float,
-              default=2,
+              default=params_default_dict["portrait"]["composite_sigma"],
               help='Sigma value used for Gaussian filters when compositing.')
 @click.option('--composite-alpha',
               '-ca',
               type=float,
-              default=0.5,
+              default=params_default_dict["portrait"]["composite_alpha"],
               help='Alpha value used for Gaussian filters when compositing.')
-def portrait(input, output, composite, composite_sigma, composite_alpha):
+def portrait(input, output, model, composite, composite_sigma, composite_alpha):
     if os.path.isabs(input):
         input_path = input
     else:
@@ -55,7 +61,7 @@ def portrait(input, output, composite, composite_sigma, composite_alpha):
         f = Image.open(input_path).convert("RGB")
         result = p(
             f,
-            input_model='u2net_portrait',
+            input_model=model,
             composite=composite,
             sigma=composite_sigma,
             alpha=composite_alpha
@@ -78,10 +84,27 @@ def portrait(input, output, composite, composite_sigma, composite_alpha):
         if not os.path.exists(os.path.split(output_path)[0]):
             raise FileNotFoundError("You have to specific a valid output path for a video input")
         else:
-            flag = vp(input_path, output_path)
+            flag = vp(input_path, output_path, input_model=model)
 
     else:
         raise FileNotFoundError("The input " + input_path + " is not a valid path to a image file")
+
+
+def batch(input_folder, config_path):
+    method, config = load_config(config_path)
+    if method != "cutout":
+        raise Exception("The method indicated in the file is not 'cutout', please check your config file.")
+    for root, _, files in os.walk(input_folder):
+        for file in files:
+            model = get_model(config['model'])
+            portrait(file,
+                     output=config["output"],
+                     model=model,
+                     composite=config["composite"],
+                     composite_sigma=config["composite_sigma"],
+                     composite_alpha=config["composite_alpha"])
+    print("Batch process completed")
+    return True
 
 
 if __name__ == '__main__':
