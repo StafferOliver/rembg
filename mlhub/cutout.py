@@ -132,25 +132,5 @@ def cutout(input, output, model, compare, alpha_matting,
         raise FileNotFoundError("The input " + input_path + " is not a valid path to a image file")
 
 
-def batch(input_folder, config_path):
-    method, config = load_config(config_path)
-    if method != "cutout":
-        raise Exception("The method indicated in the file is not 'cutout', please check your config file.")
-    for root, _, files in os.walk(input_folder):
-        model = get_model(config['model'])
-        for file in files:
-            cutout(file,
-                   output=config['output'],
-                   model=model,
-                   compare=config['compare'],
-                   alpha_matting=config['alpha_matting'],
-                   alpha_matting_foreground_threshold=config["alpha_matting_foreground_threshold"],
-                   alpha_matting_background_threshold=config["alpha_matting_background_threshold"],
-                   alpha_matting_erode_structure_size=config["alpha_matting_erode_size"],
-                   alpha_matting_base_size=config["alpha_matting_base_size"])
-    print("Batch process completed")
-    return True
-
-
 if __name__ == '__main__':
     cutout()

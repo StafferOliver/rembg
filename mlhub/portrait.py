@@ -90,22 +90,5 @@ def portrait(input, output, model, composite, composite_sigma, composite_alpha):
         raise FileNotFoundError("The input " + input_path + " is not a valid path to a image file")
 
 
-def batch(input_folder, config_path):
-    method, config = load_config(config_path)
-    if method != "cutout":
-        raise Exception("The method indicated in the file is not 'cutout', please check your config file.")
-    for root, _, files in os.walk(input_folder):
-        model = get_model(config['model'])
-        for file in files:
-            portrait(file,
-                     output=config["output"],
-                     model=model,
-                     composite=config["composite"],
-                     composite_sigma=config["composite_sigma"],
-                     composite_alpha=config["composite_alpha"])
-    print("Batch process completed")
-    return True
-
-
 if __name__ == '__main__':
     portrait()

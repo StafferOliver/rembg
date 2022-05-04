@@ -430,4 +430,4 @@ def save_config():
             config_values.append(custom_val)
     config_path = input("Please specify the path to the config file: ")
     _save_config(config_path, method, config_values)
-    return True
+    return config_path, method, config_values
