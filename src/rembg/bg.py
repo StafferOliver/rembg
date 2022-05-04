@@ -13,12 +13,12 @@ params_default_dict = {
     "cutout": {"input": "required",
                "output": None,
                "model": "u2net",
-               "compare": True,
-               "alpha_matting": False,
-               "alpha_matting_foreground_threshold": 240,
-               "alpha_matting_background_threshold": 10,
-               "alpha_matting_erode_size": 10,
-               "alpha_matting_base_size": 1000},
+               "compare": "True",
+               "alpha_matting": "False",
+               "alpha_matting_foreground_threshold": "240",
+               "alpha_matting_background_threshold": "10",
+               "alpha_matting_erode_size": "10",
+               "alpha_matting_base_size": "1000"},
     "portrait": {"input": "required",
                  "output": None,
                  "model": "u2net_portrait",
@@ -398,7 +398,7 @@ def load_config(config_path):
 
 
 # Deprecated
-def save_config(config_path, method, config_list):
+def _save_config(config_path, method, config_list):
     """
     Save configurations to YAML file
 
@@ -416,3 +416,18 @@ def save_config(config_path, method, config_list):
         else:
             output_dict[params_default_dict[method].keys()[i]] = params_default_dict[method].values()[i]
     yaml.dump({method: output_dict}, f)
+
+
+def save_config():
+    method = input("Please specify the method (portrait/cutout) you want to setup: ")
+    assert method in params_default_dict.keys()
+    config_values = []
+    for k,v in params_default_dict[method].items():
+        custom_val = input("Please specify the value for {} or leave a blank for default value: ".format(k))
+        if len(custom_val) == 0:
+            config_values.append(v)
+        else:
+            config_values.append(custom_val)
+    config_path = input("Please specify the path to the config file: ")
+    _save_config(config_path, method, config_values)
+    return True
