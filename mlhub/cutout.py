@@ -36,31 +36,31 @@ if len(model_choices) == 0:
               help='The model name')
 @click.option('--compare',
               '-c',
-              is_flag=params_default_dict['cutout']['compare'],
+              is_flag=bool(params_default_dict['cutout']['compare']),
               help="Display both original and result picture")
 @click.option('--alpha-matting',
               '-a',
-              is_flag=params_default_dict['cutout']['alpha_matting'],
+              is_flag=bool(params_default_dict['cutout']['alpha_matting']),
               help='When true use alpha matting cutout')
 @click.option('--alpha-matting-foreground-threshold',
               '-af',
               type=int,
-              default=params_default_dict['cutout']['alpha_matting_foreground_threshold'],
+              default=int(params_default_dict['cutout']['alpha_matting_foreground_threshold']),
               help='The trimap foreground threshold')
 @click.option('--alpha-matting-background-threshold',
               '-ab',
               type=int,
-              default=params_default_dict['cutout']['alpha_matting_background_threshold'],
+              default=int(params_default_dict['cutout']['alpha_matting_background_threshold']),
               help='The trimap background threshold')
 @click.option('--alpha-matting-erode-size',
               '-ae',
               type=int,
-              default=params_default_dict['cutout']['alpha_matting_erode_size'],
+              default=int(params_default_dict['cutout']['alpha_matting_erode_size']),
               help='Size of element used for the erosion')
 @click.option('--alpha-matting-base-size',
               '-ab',
               type=int,
-              default=params_default_dict['cutout']['alpha_matting_base_size'],
+              default=int(params_default_dict['cutout']['alpha_matting_base_size']),
               help='The image base size')
 def cutout(input, output, model, compare, alpha_matting,
            alpha_matting_foreground_threshold,
