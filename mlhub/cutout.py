@@ -40,27 +40,27 @@ if len(model_choices) == 0:
               help="Display both original and result picture")
 @click.option('--alpha-matting',
               '-a',
-              is_flag=params_default_dict['cutout']['alpha-matting'],
+              is_flag=params_default_dict['cutout']['alpha_matting'],
               help='When true use alpha matting cutout')
 @click.option('--alpha-matting-foreground-threshold',
               '-af',
               type=int,
-              default=params_default_dict['cutout']['alpha-matting-foreground-threshold'],
+              default=params_default_dict['cutout']['alpha_matting_foreground_threshold'],
               help='The trimap foreground threshold')
 @click.option('--alpha-matting-background-threshold',
               '-ab',
               type=int,
-              default=params_default_dict['cutout']['alpha-matting-background-threshold'],
+              default=params_default_dict['cutout']['alpha_matting_background_threshold'],
               help='The trimap background threshold')
 @click.option('--alpha-matting-erode-size',
               '-ae',
               type=int,
-              default=params_default_dict['cutout']['alpha-matting-erode-size'],
+              default=params_default_dict['cutout']['alpha_matting_erode_size'],
               help='Size of element used for the erosion')
 @click.option('--alpha-matting-base-size',
               '-ab',
               type=int,
-              default=params_default_dict['cutout']['alpha-matting-base-size'],
+              default=params_default_dict['cutout']['alpha_matting_base_size'],
               help='The image base size')
 def cutout(input, output, model, compare, alpha_matting,
            alpha_matting_foreground_threshold,
@@ -137,8 +137,8 @@ def batch(input_folder, config_path):
     if method != "cutout":
         raise Exception("The method indicated in the file is not 'cutout', please check your config file.")
     for root, _, files in os.walk(input_folder):
+        model = get_model(config['model'])
         for file in files:
-            model = get_model(config['model'])
             cutout(file,
                    output=config['output'],
                    model=model,

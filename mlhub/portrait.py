@@ -95,8 +95,8 @@ def batch(input_folder, config_path):
     if method != "cutout":
         raise Exception("The method indicated in the file is not 'cutout', please check your config file.")
     for root, _, files in os.walk(input_folder):
+        model = get_model(config['model'])
         for file in files:
-            model = get_model(config['model'])
             portrait(file,
                      output=config["output"],
                      model=model,
