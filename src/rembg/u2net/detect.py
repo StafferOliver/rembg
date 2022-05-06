@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import requests
 import torch
+import traceback
 from hsh.library.hash import Hasher
 from torchvision import transforms
 from pickle import UnpicklingError
@@ -25,20 +26,9 @@ def download_file_from_google_drive(id, fname, destination):
     head, tail = os.path.split(destination)
     os.makedirs(head, exist_ok=True)
 
-    URL = "https://docs.google.com/uc?export=download"
+    URL = "https://docs.google.com/uc?export=download&id=" + id
 
-    session = requests.Session()
-    response = session.get(URL, params={"id": id}, stream=True)
-
-    token = None
-    for key, value in response.cookies.items():
-        if key.startswith("download_warning"):
-            token = value
-            break
-
-    if token:
-        params = {"id": id, "confirm": token}
-        response = session.get(URL, params=params, stream=True)
+    response = requests.get(URL)
 
     header = response.headers
     total = int(header.get("content-length", 0))
@@ -50,20 +40,22 @@ def download_file_from_google_drive(id, fname, destination):
 
     max_errors = 5
 
-    while downloaded <= total and max_errors >= 0:
+    while downloaded < total and max_errors > 0:
         try:
             header['Range'] = 'bytes={}-'.format(downloaded)
-            response = session.get(URL, params=params, headers=header, stream=True)
+            response = requests.get(URL, headers=header, stream=True)
             with open(destination, "ab") as file:
                 for data in response.iter_content(chunk_size=1024):
                     if data:
                         downloaded += len(data)
                         file.write(data)
-        except (OSError, ConnectionError, UnpicklingError):
-            print("Attempt {} failed, {} of {} has been downloaded".format(6-max_errors, downloaded, total))
+        except (OSError, ConnectionError, UnpicklingError) as e:
+            traceback.print_exc()
+            print("Attempt {} failed, {} of {} has been downloaded".format(6 - max_errors, downloaded, total))
             max_errors -= 1
+            continue
 
-    if max_errors >= 0:
+    if max_errors > 0:
         print("Model {} has downloaded successfully.".format(fname))
         return True
     else:
