@@ -28,21 +28,19 @@ def download_file_from_google_drive(id, fname, destination):
 
     URL = "https://docs.google.com/uc?export=download&id=" + id
 
-    response = requests.get(URL)
+    response = requests.get(URL, stream=True)
 
-    header = response.headers
-    total = int(header.get("content-length", 0))
-
-    if os.path.exists(destination):
-        downloaded = os.path.getsize(destination)
-    else:
-        downloaded = 0
+    total = int(response.headers.get("content-length", 0))
 
     max_errors = 5
 
     while downloaded < total and max_errors > 0:
         try:
-            header['Range'] = 'bytes={}-'.format(downloaded)
+            if os.path.exists(destination):
+                downloaded = os.path.getsize(destination)
+            else:
+                downloaded = 0
+            header = {'Range': 'bytes={}-'.format(downloaded)}
             response = requests.get(URL, headers=header, stream=True)
             with open(destination, "ab") as file:
                 for data in response.iter_content(chunk_size=1024):
