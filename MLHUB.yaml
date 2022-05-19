@@ -2,7 +2,7 @@ meta:
   name         : rembg
   title        : rembg
   keywords     : rembg, background removal, image processing
-  version      : 0.1.1
+  version      : 0.1.4
   languages    : py
   license      : mit
   author       : u6440034@anu.edu.au
@@ -34,4 +34,4 @@ commands:
   demo       : Run rembg demo with random example from provided pictures
   cutout     : Background removal on custom images or videos
   portrait   : Portrait generation for given images or videos (Experimental)
-  batch      : Performing batch process 
+  batch      : Performing batch process
