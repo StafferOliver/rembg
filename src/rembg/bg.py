@@ -27,17 +27,17 @@ params_default_dict = {
                  "composite_alpha": 0.5}
 }
 
-params_dict = {"cutout": params_default_dict["cutout"].keys(),
-               "protrain": params_default_dict["portrait"].keys()}
+params_dict = {"cutout": list(params_default_dict["cutout"].keys()),
+               "portrait": list(params_default_dict["portrait"].keys())}
 
 
 def alpha_matting_cutout(
     img,
     mask,
-    foreground_threshold=240,
-    background_threshold=10,
-    erode_structure_size=10,
-    base_size=1000,
+    alpha_matting_foreground_threshold=240,
+    alpha_matting_background_threshold=10,
+    alpha_matting_erode_structure_size=10,
+    alpha_matting_base_size=1000,
 ):
     try:
         from pymatting.alpha.estimate_alpha_cf import estimate_alpha_cf
@@ -50,20 +50,20 @@ def alpha_matting_cutout(
     else:
         size = img.size
 
-        img.thumbnail((base_size, base_size), Image.LANCZOS)
+        img.thumbnail((alpha_matting_base_size, alpha_matting_base_size), Image.LANCZOS)
         mask = mask.resize(img.size, Image.LANCZOS)
 
         img = np.asarray(img)
         mask = np.asarray(mask)
 
         # guess likely foreground/background
-        is_foreground = mask > foreground_threshold
-        is_background = mask < background_threshold
+        is_foreground = mask > alpha_matting_foreground_threshold
+        is_background = mask < alpha_matting_background_threshold
 
         # erode foreground/background
         structure = None
-        if erode_structure_size > 0:
-            structure = np.ones((erode_structure_size, erode_structure_size), dtype=np.int)
+        if alpha_matting_erode_structure_size > 0:
+            structure = np.ones((alpha_matting_erode_structure_size, alpha_matting_erode_structure_size), dtype=np.int)
 
         is_foreground = binary_erosion(is_foreground, structure=structure)
         is_background = binary_erosion(is_background, structure=structure, border_value=1)
@@ -387,11 +387,12 @@ def load_config(config_path):
     """
     f = open(config_path, 'r')
     saved_config = yaml.load(f)
-    method = saved_config["method"]
+    method = list(saved_config.keys())[0]
+    saved_config = saved_config[method]
     config = {}
     for i in range(len(params_dict[method])):
         if saved_config[params_dict[method][i]] is None:
-            config[params_dict[method][i]] = params_default_dict[method].values()[i]
+            config[params_dict[method][i]] = list(params_default_dict[method].values())[i]
         else:
             config[params_dict[method][i]] = saved_config[params_dict[method][i]]
     return method, config
@@ -410,11 +411,11 @@ def _save_config(config_path, method, config_list):
     output_dict = {}
     for i in range(len(params_default_dict[method].keys())):
         if i == 0:
-            output_dict[params_default_dict[method].keys()[i]] = "required"
-        elif config_list[i] is None and params_default_dict[method].keys()[i] is not None:
-            output_dict[params_default_dict[method].keys()[i]] = config_list[i]
+            output_dict[list(params_default_dict[method].keys())[i]] = "required"
+        elif config_list[i] is None and list(params_default_dict[method].keys())[i] is not None:
+            output_dict[list(params_default_dict[method].keys())[i]] = config_list[i]
         else:
-            output_dict[params_default_dict[method].keys()[i]] = params_default_dict[method].values()[i]
+            output_dict[list(params_default_dict[method].keys())[i]] = list(params_default_dict[method].values())[i]
     yaml.dump({method: output_dict}, f)
 
 

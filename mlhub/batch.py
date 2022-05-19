@@ -1,8 +1,8 @@
 import click
 import os
 from src.rembg.bg import load_config, get_model, save_config
-from cutout import cutout
-from portrait import portrait
+from cutout import _cutout as cutout
+from portrait import _portrait as portrait
 
 
 @click.command()
@@ -15,28 +15,32 @@ from portrait import portrait
 def batch(input_folder, config_path, setup):
     if setup:
         setup_path, _, _ = save_config()
-    if setup_path == config_path:
-        method, config = load_config(config_path)
+        if setup_path is not None and setup_path == config_path:
+            method, config = load_config(config_path)
+        else:
+            raise FileNotFoundError("The setup path and given path the config are not the same.")
     else:
-        raise FileNotFoundError("The setup path and given path the config are not the same.")
+        method, config = load_config(config_path)
     if method == "cutout":
         for root, _, files in os.walk(input_folder):
             model = get_model(config['model'])
             for file in files:
-                cutout(file,
+                print("Starting processing {}".format(file))
+                cutout(input=os.path.join(root,file),
                        output=config['output'],
                        model=model,
                        compare=config['compare'],
-                       alpha_matting=config['alpha_matting'],
+                       alpha_matting=bool(config['alpha_matting']),
                        alpha_matting_foreground_threshold=config["alpha_matting_foreground_threshold"],
                        alpha_matting_background_threshold=config["alpha_matting_background_threshold"],
-                       alpha_matting_erode_structure_size=config["alpha_matting_erode_size"],
+                       alpha_matting_erode_size=config["alpha_matting_erode_size"],
                        alpha_matting_base_size=config["alpha_matting_base_size"])
     elif method == "portrait":
         for root, _, files in os.walk(input_folder):
             model = get_model(config['model'])
             for file in files:
-                portrait(file,
+                print("Starting processing {}".format(file))
+                portrait(input=os.path.join(root,file),
                          output=config["output"],
                          model=model,
                          composite=config["composite"],
@@ -47,3 +51,6 @@ def batch(input_folder, config_path, setup):
                         "please check your config file.")
     print("Batch process completed")
     return True
+
+if __name__ == '__main__':
+    batch()

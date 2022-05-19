@@ -67,6 +67,18 @@ def cutout(input, output, model, compare, alpha_matting,
            alpha_matting_background_threshold,
            alpha_matting_erode_size,
            alpha_matting_base_size):
+    _cutout(input, output, model, compare, alpha_matting,
+           alpha_matting_foreground_threshold,
+           alpha_matting_background_threshold,
+           alpha_matting_erode_size,
+           alpha_matting_base_size)
+
+
+def _cutout(input, output, model, compare, alpha_matting,
+           alpha_matting_foreground_threshold,
+           alpha_matting_background_threshold,
+           alpha_matting_erode_size,
+           alpha_matting_base_size):
     if os.path.isabs(input):
         input_path = input
     else:
@@ -123,10 +135,10 @@ def cutout(input, output, model, compare, alpha_matting,
 
     elif os.path.exists(input_path) \
          and filetype.guess(input_path).mime.find('video') >= 0:
-        if not os.path.exists(os.path.split(output_path)[0]):
-            raise FileNotFoundError("You have to specific a valid output path for a video input")
-        else:
-            flag = video_remove(input_path, output_path, input_model=model)
+        if output is None:
+            output_path, output_file = os.path.split(input_path)
+            output_file = output_file.split('.')
+        flag = video_remove(input_path, os.path.join(output_path, output_file[0]+'_out.'+output_file[1]), input_model=model)
 
     else:
         raise FileNotFoundError("The input " + input_path + " is not a valid path to a image file")

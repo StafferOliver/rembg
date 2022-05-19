@@ -2,14 +2,13 @@ meta:
   name         : rembg
   title        : rembg
   keywords     : rembg, background removal, image processing
-  version      : 0.1.2
+  version      : 0.1.1
   languages    : py
   license      : mit
   author       : u6440034@anu.edu.au
   url          : https://github.com/StafferOliver/rembg
 dependencies:
   pip3:
-    - click
     - ffmpeg
     - filetype
     - hsh
@@ -35,3 +34,4 @@ commands:
   demo       : Run rembg demo with random example from provided pictures
   cutout     : Background removal on custom images or videos
   portrait   : Portrait generation for given images or videos (Experimental)
+  batch      : Performing batch process 
