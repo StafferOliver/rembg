@@ -1,20 +1,43 @@
 import functools
 import io
 import numpy as np
+import torch.nn as nn
+import yaml
 from PIL import Image
 from skimage import transform
 from skimage.filters import gaussian
 from .u2net import detect
 from pickle import UnpicklingError
 
+params_default_dict = {
+    "cutout": {"input": "required",
+               "output": None,
+               "model": "u2net",
+               "compare": "True",
+               "alpha_matting": "False",
+               "alpha_matting_foreground_threshold": "240",
+               "alpha_matting_background_threshold": "10",
+               "alpha_matting_erode_size": "10",
+               "alpha_matting_base_size": "1000"},
+    "portrait": {"input": "required",
+                 "output": None,
+                 "model": "u2net_portrait",
+                 "composite": True,
+                 "composite_sigma": 2,
+                 "composite_alpha": 0.5}
+}
+
+params_dict = {"cutout": list(params_default_dict["cutout"].keys()),
+               "portrait": list(params_default_dict["portrait"].keys())}
+
 
 def alpha_matting_cutout(
     img,
     mask,
-    foreground_threshold=240,
-    background_threshold=10,
-    erode_structure_size=10,
-    base_size=1000,
+    alpha_matting_foreground_threshold=240,
+    alpha_matting_background_threshold=10,
+    alpha_matting_erode_structure_size=10,
+    alpha_matting_base_size=1000,
 ):
     try:
         from pymatting.alpha.estimate_alpha_cf import estimate_alpha_cf
@@ -27,20 +50,20 @@ def alpha_matting_cutout(
     else:
         size = img.size
 
-        img.thumbnail((base_size, base_size), Image.LANCZOS)
+        img.thumbnail((alpha_matting_base_size, alpha_matting_base_size), Image.LANCZOS)
         mask = mask.resize(img.size, Image.LANCZOS)
 
         img = np.asarray(img)
         mask = np.asarray(mask)
 
         # guess likely foreground/background
-        is_foreground = mask > foreground_threshold
-        is_background = mask < background_threshold
+        is_foreground = mask > alpha_matting_foreground_threshold
+        is_background = mask < alpha_matting_background_threshold
 
         # erode foreground/background
         structure = None
-        if erode_structure_size > 0:
-            structure = np.ones((erode_structure_size, erode_structure_size), dtype=np.int)
+        if alpha_matting_erode_structure_size > 0:
+            structure = np.ones((alpha_matting_erode_structure_size, alpha_matting_erode_structure_size), dtype=np.int)
 
         is_foreground = binary_erosion(is_foreground, structure=structure)
         is_background = binary_erosion(is_background, structure=structure, border_value=1)
@@ -79,36 +102,20 @@ def naive_cutout(img, mask):
 
 @functools.lru_cache(maxsize=None)
 def get_model(model_name):
-    error_count = 0
-    return_model = None
-    while error_count < 5:
-        try:
-            if model_name == "u2netp":
-                return_model = detect.load_model(model_name="u2netp")
-                break
-            if model_name == "u2net_human_seg":
-                return_model = detect.load_model(model_name="u2net_human_seg")
-                break
-            if model_name == "u2net_portrait":
-                return_model = detect.load_model(model_name="u2net_portrait")
-                break
-            else:
-                return_model = detect.load_model(model_name="u2net")
-                break
-        except (OSError, ConnectionError, UnpicklingError):
-            print("Attempt "+str(error_count+1)+" failed.")
-            error_count += 1
-            continue
-    if return_model is None:
-        raise Exception("All 5 attempts seems failed.\n "
-                        "Please check your Internet connection or download the weight manually and try again")
+    if model_name == "u2netp":
+        return_model = detect.load_model(model_name="u2netp")
+    elif model_name == "u2net_human_seg":
+        return_model = detect.load_model(model_name="u2net_human_seg")
+    elif model_name == "u2net_portrait":
+        return_model = detect.load_model(model_name="u2net_portrait")
     else:
-        return return_model
+        return_model = detect.load_model(model_name="u2net")
+    return return_model
 
 
 def remove(
     data,
-    model_name="u2net",
+    input_model="u2net",
     alpha_matting=False,
     *args, **kwargs
 ):
@@ -116,13 +123,18 @@ def remove(
     Background removal on a single image
 
     :param data: the input image (PIL.Image or NumPy.ndarray)
-    :param model_name: the model used in the background removal
+    :param input_model: the model used in the background removal
     :param alpha_matting: if True, alpha matting will be applied with the rest of parameters
     :return: return True if all the steps are correctly finished
     """
 
     # Initialize model
-    model = get_model(model_name)
+    if isinstance(input_model, str):
+        model = get_model(input_model)
+    elif isinstance(input_model, nn.Module):
+        model = input_model
+    else:
+        raise TypeError("The expected type for the argument input_model is either string or nn.Module.")
 
     # Transform data
     if isinstance(data, np.ndarray):
@@ -137,9 +149,9 @@ def remove(
     # Generate output image
     if alpha_matting:
         cutout = alpha_matting_cutout(
-                img,
-                mask,
-                *args, **kwargs
+            img,
+            mask,
+            *args, **kwargs
         )
 
     if cutout is None:
@@ -153,7 +165,7 @@ def remove(
 
 def portrait(
     data,
-    model_name='u2net_portrait',
+    input_model='u2net_portrait',
     composite=False,
     sigma=2,
     alpha=0.5
@@ -162,7 +174,7 @@ def portrait(
     Portrait generation with single given picture
 
     :param data: the input image (PIL.Image or NumPy.ndarray)
-    :param model_name: the model used in the portrait generation
+    :param input_model: the model used in the portrait generation
     :param composite: if True, the original portrait will be blurred and composite into the output
     :param sigma: the blur parameters used for Gaussian filter (Used when composite=True)
     :param alpha: the blur parameters used for Gaussian filter (Used when composite=True)
@@ -170,7 +182,12 @@ def portrait(
     """
 
     # Initialize model
-    model = get_model(model_name)
+    if isinstance(input_model, str):
+        model = get_model(input_model)
+    elif isinstance(input_model, nn.Module):
+        model = input_model
+    else:
+        raise TypeError("The expected type for the argument input_model is either string or nn.Module.")
 
     # Transform data
     if isinstance(data, np.ndarray):
@@ -188,11 +205,11 @@ def portrait(
 
     # Generate output image
     if composite:
-        output = transform.resize(output, img.shape[0:2],order=2)
-        output = output/(np.amax(output)+1e-8) * 255
-        output = output[:,:,np.newaxis]
-        img_blurred = gaussian(img,sigma=sigma,preserve_range=True)
-        output = img_blurred*alpha + output*(1-alpha)
+        output = transform.resize(output, img.shape[0:2], order=2)
+        output = output / (np.amax(output) + 1e-8) * 255
+        output = output[:, :, np.newaxis]
+        img_blurred = gaussian(img, sigma=sigma, preserve_range=True)
+        output = img_blurred * alpha + output * (1 - alpha)
         output = Image.fromarray(output.astype(np.uint8)).convert('RGB')
     else:
         output = Image.fromarray(output * 255).convert('RGB')
@@ -219,7 +236,7 @@ def alpha_layer_remove(input_image, bg_color=np.array([255, 255, 255])):
 def video_remove(
     input_path,
     output_path,
-    model_name="u2net",
+    input_model="u2net",
     alpha_matting=False,
     *args, **kwargs
 ):
@@ -228,7 +245,7 @@ def video_remove(
 
     :param input_path: the path to the input video file
     :param output_path: the path to the output video file
-    :param model_name: the model used in the background removal
+    :param input_model: the model used in the background removal
     :param alpha_matting: if True, alpha matting will be applied with the rest of parameters
     :return: return True if all the steps are correctly finished
     """
@@ -255,11 +272,18 @@ def video_remove(
 
     # Initailize output flow
     output = ffmpeg.input('pipe:', format='rawvideo', pix_fmt='rgb24', s='{}x{}'.format(width, height)) \
-                   .output(output_path, r=frame_rate).overwrite_output() \
-                   .run_async(pipe_stdin=True, quiet=True)
+        .output(output_path, r=frame_rate).overwrite_output() \
+        .run_async(pipe_stdin=True, quiet=True)
+
+    # Load model
+    if isinstance(input_model, str):
+        model = get_model(input_model)
+    elif isinstance(input_model, nn.Module):
+        model = input_model
+    else:
+        raise TypeError("The expected type for the argument input_model is either string or nn.Module.")
 
     # Removal process
-    model = get_model(model_name)
     for i in range(video_frames.shape[0]):
         img = Image.fromarray(video_frames[i, :, :, :]).convert('RGB')
         mask = Image.fromarray(detect.predict(model, np.array(img)) * 255).convert("L")
@@ -283,7 +307,7 @@ def video_remove(
 def video_portrait(
     input_path,
     output_path,
-    model_name='u2net_portrait',
+    input_model='u2net_portrait',
     composite=False,
     sigma=2,
     alpha=0.5):
@@ -292,7 +316,7 @@ def video_portrait(
 
     :param input_path: the path to the input video file
     :param output_path: the path to the output video file
-    :param model_name: the model used in the portrait generation
+    :param input_model: the model used in the portrait generation
     :param composite: if True, the original portrait will be blurred and composite into the output
     :param sigma: the blur parameters used for Gaussian filter (Used when composite=True)
     :param alpha: the blur parameters used for Gaussian filter (Used when composite=True)
@@ -321,11 +345,18 @@ def video_portrait(
 
     # Initialize output flow
     output = ffmpeg.input('pipe:', format='rawvideo', pix_fmt='rgb24', s='{}x{}'.format(width, height)) \
-                   .output(output_path, r=frame_rate).overwrite_output() \
-                   .run_async(pipe_stdin=True, quiet=True)
+        .output(output_path, r=frame_rate).overwrite_output() \
+        .run_async(pipe_stdin=True, quiet=True)
+
+    # Load model
+    if isinstance(input_model, str):
+        model = get_model(input_model)
+    elif isinstance(input_model, nn.Module):
+        model = input_model
+    else:
+        raise TypeError("The expected type for the argument input_model is either string or nn.Module.")
 
     # Portrait generation process
-    model = get_model(model_name)
     for i in range(video_frames.shape[0]):
         img = Image.fromarray(video_frames[i, :, :, :]).convert('RGB')
         result = detect.predict(model, img, True)
@@ -344,3 +375,60 @@ def video_portrait(
     output.stdin.close()
     output.wait()
     return True
+
+
+def load_config(config_path):
+    """
+    Load saved configurations from existing YAML file
+
+    :param config_path: The path to the input file
+    :return: The first element of the tuple indicate the method is going to be used
+             The second element indicate the detailed configs
+    """
+    f = open(config_path, 'r')
+    saved_config = yaml.load(f)
+    method = list(saved_config.keys())[0]
+    saved_config = saved_config[method]
+    config = {}
+    for i in range(len(params_dict[method])):
+        if saved_config[params_dict[method][i]] is None:
+            config[params_dict[method][i]] = list(params_default_dict[method].values())[i]
+        else:
+            config[params_dict[method][i]] = saved_config[params_dict[method][i]]
+    return method, config
+
+
+# Deprecated
+def _save_config(config_path, method, config_list):
+    """
+    Save configurations to YAML file
+
+    :param config_path: the path to the YAML file
+    :param method: the method is going to be saved
+    :param config_list: the detailed configurations
+    """
+    f = open(config_path, 'w')
+    output_dict = {}
+    for i in range(len(params_default_dict[method].keys())):
+        if i == 0:
+            output_dict[list(params_default_dict[method].keys())[i]] = "required"
+        elif config_list[i] is None and list(params_default_dict[method].keys())[i] is not None:
+            output_dict[list(params_default_dict[method].keys())[i]] = config_list[i]
+        else:
+            output_dict[list(params_default_dict[method].keys())[i]] = list(params_default_dict[method].values())[i]
+    yaml.dump({method: output_dict}, f)
+
+
+def save_config():
+    method = input("Please specify the method (portrait/cutout) you want to setup: ")
+    assert method in params_default_dict.keys()
+    config_values = []
+    for k,v in params_default_dict[method].items():
+        custom_val = input("Please specify the value for {} or leave a blank for default value: ".format(k))
+        if len(custom_val) == 0:
+            config_values.append(v)
+        else:
+            config_values.append(custom_val)
+    config_path = input("Please specify the path to the config file: ")
+    _save_config(config_path, method, config_values)
+    return config_path, method, config_values

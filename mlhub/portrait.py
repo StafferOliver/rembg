@@ -2,6 +2,7 @@ import click
 import os
 import warnings
 import filetype
+from src.rembg.bg import params_default_dict, load_config, get_model
 from src.rembg.bg import portrait as p, video_portrait as vp
 from PIL import Image, ImageFile
 import matplotlib.pyplot as plt
@@ -22,23 +23,32 @@ model_path = os.environ.get(
 @click.option('--output',
               '-o',
               type=str,
-              default=None,
+              default=params_default_dict["portrait"]["output"],
               help='Path to the output file')
+@click.option('--model',
+              '-m',
+              type=str,
+              default=params_default_dict["portrait"]["model"],
+              help='The model name')
 @click.option('--composite',
               '-c',
-              default=True,
+              default=params_default_dict["portrait"]["composite"],
               help='Generate the composition of portrait and original photo')
 @click.option('--composite-sigma',
               '-cs',
               type=float,
-              default=2,
+              default=params_default_dict["portrait"]["composite_sigma"],
               help='Sigma value used for Gaussian filters when compositing.')
 @click.option('--composite-alpha',
               '-ca',
               type=float,
-              default=0.5,
+              default=params_default_dict["portrait"]["composite_alpha"],
               help='Alpha value used for Gaussian filters when compositing.')
-def portrait(input, output, composite, composite_sigma, composite_alpha):
+def portrait(input, output, model, composite, composite_sigma, composite_alpha):
+    _portrait(input, output, model, composite, composite_sigma, composite_alpha)
+
+
+def _portrait(input, output, model, composite, composite_sigma, composite_alpha):
     if os.path.isabs(input):
         input_path = input
     else:
@@ -55,7 +65,7 @@ def portrait(input, output, composite, composite_sigma, composite_alpha):
         f = Image.open(input_path).convert("RGB")
         result = p(
             f,
-            model_name='u2net_portrait',
+            input_model=model,
             composite=composite,
             sigma=composite_sigma,
             alpha=composite_alpha
@@ -75,10 +85,10 @@ def portrait(input, output, composite, composite_sigma, composite_alpha):
 
     elif os.path.exists(input_path) \
         and filetype.guess(input_path).mime.find('video') >= 0:
-        if not os.path.exists(os.path.split(output_path)[0]):
-            raise FileNotFoundError("You have to specific a valid output path for a video input")
-        else:
-            flag = vp(input_path, output_path)
+        if output is None:
+            output_path, output_file = os.path.split(input_path)
+            output_file = output_file.split('.')
+        flag = vp(input_path, os.path.join(output_path, output_file[0]+'_out.'+output_file[1]), input_model=model)
 
     else:
         raise FileNotFoundError("The input " + input_path + " is not a valid path to a image file")

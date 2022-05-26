@@ -5,7 +5,7 @@ import glob
 import os
 import warnings
 import filetype
-from src.rembg.bg import remove, alpha_layer_remove, video_remove
+from src.rembg.bg import remove, get_model, alpha_layer_remove, video_remove, params_default_dict, load_config
 from PIL import Image, ImageFile
 import matplotlib.pyplot as plt
 from mlhub.utils import get_package_dir
@@ -27,42 +27,54 @@ if len(model_choices) == 0:
 @click.option('--output',
               '-o',
               type=str,
-              default=None,
+              default=params_default_dict['cutout']['output'],
               help='Path to the output file')
 @click.option('--model',
               '-m',
               type=click.Choice(model_choices),
-              default="u2net",
+              default=params_default_dict['cutout']['model'],
               help='The model name')
 @click.option('--compare',
               '-c',
-              is_flag=True,
+              is_flag=bool(params_default_dict['cutout']['compare']),
               help="Display both original and result picture")
 @click.option('--alpha-matting',
               '-a',
-              is_flag=False,
+              is_flag=bool(params_default_dict['cutout']['alpha_matting']),
               help='When true use alpha matting cutout')
 @click.option('--alpha-matting-foreground-threshold',
               '-af',
               type=int,
-              default=240,
+              default=int(params_default_dict['cutout']['alpha_matting_foreground_threshold']),
               help='The trimap foreground threshold')
 @click.option('--alpha-matting-background-threshold',
               '-ab',
               type=int,
-              default=10,
+              default=int(params_default_dict['cutout']['alpha_matting_background_threshold']),
               help='The trimap background threshold')
 @click.option('--alpha-matting-erode-size',
               '-ae',
               type=int,
-              default=10,
+              default=int(params_default_dict['cutout']['alpha_matting_erode_size']),
               help='Size of element used for the erosion')
 @click.option('--alpha-matting-base-size',
               '-ab',
               type=int,
-              default=1000,
+              default=int(params_default_dict['cutout']['alpha_matting_base_size']),
               help='The image base size')
 def cutout(input, output, model, compare, alpha_matting,
+           alpha_matting_foreground_threshold,
+           alpha_matting_background_threshold,
+           alpha_matting_erode_size,
+           alpha_matting_base_size):
+    _cutout(input, output, model, compare, alpha_matting,
+           alpha_matting_foreground_threshold,
+           alpha_matting_background_threshold,
+           alpha_matting_erode_size,
+           alpha_matting_base_size)
+
+
+def _cutout(input, output, model, compare, alpha_matting,
            alpha_matting_foreground_threshold,
            alpha_matting_background_threshold,
            alpha_matting_erode_size,
@@ -83,12 +95,12 @@ def cutout(input, output, model, compare, alpha_matting,
         f = np.fromfile(input_path)
         result = remove(
                 f,
-                model_name=model,
+                input_model=model,
                 alpha_matting=alpha_matting,
                 alpha_matting_foreground_threshold=alpha_matting_foreground_threshold,
                 alpha_matting_background_threshold=alpha_matting_background_threshold,
                 alpha_matting_erode_structure_size=alpha_matting_erode_size,
-                alpha_matting_base_size=alpha_matting_base_size,
+                alpha_matting_base_size=alpha_matting_base_size
             )
 
         if filetype.guess(input_path).mime.find('jpeg') >= 0:
@@ -123,10 +135,10 @@ def cutout(input, output, model, compare, alpha_matting,
 
     elif os.path.exists(input_path) \
          and filetype.guess(input_path).mime.find('video') >= 0:
-        if not os.path.exists(os.path.split(output_path)[0]):
-            raise FileNotFoundError("You have to specific a valid output path for a video input")
-        else:
-            flag = video_remove(input_path, output_path)
+        if output is None:
+            output_path, output_file = os.path.split(input_path)
+            output_file = output_file.split('.')
+        flag = video_remove(input_path, os.path.join(output_path, output_file[0]+'_out.'+output_file[1]), input_model=model)
 
     else:
         raise FileNotFoundError("The input " + input_path + " is not a valid path to a image file")

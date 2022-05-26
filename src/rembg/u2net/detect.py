@@ -5,9 +5,10 @@ import sys
 import numpy as np
 import requests
 import torch
+import traceback
 from hsh.library.hash import Hasher
 from torchvision import transforms
-from tqdm import tqdm
+from pickle import UnpicklingError
 
 from . import data_loader, u2net
 
@@ -25,33 +26,39 @@ def download_file_from_google_drive(id, fname, destination):
     head, tail = os.path.split(destination)
     os.makedirs(head, exist_ok=True)
 
-    URL = "https://docs.google.com/uc?export=download"
+    URL = "https://docs.google.com/uc?export=download&id=" + id
 
-    session = requests.Session()
-    response = session.get(URL, params={"id": id}, stream=True)
-
-    token = None
-    for key, value in response.cookies.items():
-        if key.startswith("download_warning"):
-            token = value
-            break
-
-    if token:
-        params = {"id": id, "confirm": token}
-        response = session.get(URL, params=params, stream=True)
+    response = requests.get(URL, stream=True)
 
     total = int(response.headers.get("content-length", 0))
 
-    with open(destination, "wb") as file, tqdm(
-        desc=f"Downloading {tail} to {head}",
-        total=total,
-        unit="iB",
-        unit_scale=True,
-        unit_divisor=1024,
-    ) as bar:
-        for data in response.iter_content(chunk_size=1024):
-            size = file.write(data)
-            bar.update(size)
+    max_errors = 5
+
+    while downloaded < total and max_errors > 0:
+        try:
+            if os.path.exists(destination):
+                downloaded = os.path.getsize(destination)
+            else:
+                downloaded = 0
+            header = {'Range': 'bytes={}-'.format(downloaded)}
+            response = requests.get(URL, headers=header, stream=True)
+            with open(destination, "ab") as file:
+                for data in response.iter_content(chunk_size=1024):
+                    if data:
+                        downloaded += len(data)
+                        file.write(data)
+        except (OSError, ConnectionError, UnpicklingError) as e:
+            traceback.print_exc()
+            print("Attempt {} failed, {} of {} has been downloaded".format(6 - max_errors, downloaded, total))
+            max_errors -= 1
+            continue
+
+    if max_errors > 0:
+        print("Model {} has downloaded successfully.".format(fname))
+        return True
+    else:
+        print("Model {} has not been downloaded yet. Check your network connections.".format(fname))
+        return False
 
 
 def load_model(model_name: str = None):
