@@ -30,7 +30,7 @@ def batch(input_folder, config_path, setup):
                        output=config['output'],
                        model=model,
                        compare=config['compare'],
-                       alpha_matting=bool(config['alpha_matting']),
+                       alpha_matting=config['alpha_matting']==True,
                        alpha_matting_foreground_threshold=config["alpha_matting_foreground_threshold"],
                        alpha_matting_background_threshold=config["alpha_matting_background_threshold"],
                        alpha_matting_erode_size=config["alpha_matting_erode_size"],
