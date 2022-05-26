@@ -29,8 +29,8 @@ def batch(input_folder, config_path, setup):
                 cutout(input=os.path.join(root,file),
                        output=config['output'],
                        model=model,
-                       compare=config['compare'],
-                       alpha_matting=config['alpha_matting']==True,
+                       compare=config['compare']=="True",
+                       alpha_matting=config['alpha_matting']=="True",
                        alpha_matting_foreground_threshold=config["alpha_matting_foreground_threshold"],
                        alpha_matting_background_threshold=config["alpha_matting_background_threshold"],
                        alpha_matting_erode_size=config["alpha_matting_erode_size"],
@@ -43,7 +43,7 @@ def batch(input_folder, config_path, setup):
                 portrait(input=os.path.join(root,file),
                          output=config["output"],
                          model=model,
-                         composite=config["composite"],
+                         composite=config["composite"]=="True",
                          composite_sigma=config["composite_sigma"],
                          composite_alpha=config["composite_alpha"])
     else:
