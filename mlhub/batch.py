@@ -43,7 +43,7 @@ def batch(input_folder, config_path, setup):
                 portrait(input=os.path.join(root,file),
                          output=config["output"],
                          model=model,
-                         composite=config["composite"]=="True",
+                         composite=config["composite"],
                          composite_sigma=config["composite_sigma"],
                          composite_alpha=config["composite_alpha"])
     else:
