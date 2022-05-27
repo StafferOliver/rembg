@@ -3,7 +3,9 @@
 ## Introduction
 rembg is a Python library for image/video background removal or portrait generation, which is based on u2net as backbone network.
 
-To use this library, extra pretrained model for u2net will be downloaded.
+To use this library, extra pretrained model for u2net will be downloaded. If the models failed to download for several times due to the security policies of Google Drive, please refer to https://github.com/xuebinqin/U-2-Net for downloading.
+
+This library is developed with MLHub library. Directly downloading zip files might not working.
 
 See https://arxiv.org/pdf/2005.09007.pdf for paper or https://github.com/xuebinqin/U-2-Net for detailed model descriptions.
 
